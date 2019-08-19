@@ -1,4 +1,5 @@
 {
+  "name": "react-select-async-paginate-sf",
   "private": true,
   "workspaces": [
     "packages/*",
