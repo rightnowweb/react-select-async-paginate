@@ -17,307 +17,316 @@ const sleep = (ms) => new Promise((resolve) => {
 });
 
 class AsyncPaginateBase extends Component {
-  static propTypes = {
-    loadOptions: PropTypes.func.isRequired,
-    debounceTimeout: PropTypes.number,
-    shouldLoadMore: PropTypes.func,
-    inputValue: PropTypes.string.isRequired,
-    menuIsOpen: PropTypes.bool.isRequired,
+	static propTypes = {
+		loadOptions: PropTypes.func.isRequired,
+		debounceTimeout: PropTypes.number,
+		shouldLoadMore: PropTypes.func,
+		inputValue: PropTypes.string.isRequired,
+		menuIsOpen: PropTypes.bool.isRequired,
 
-    options: PropTypes.arrayOf(PropTypes.object),
-    defaultOptions: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.arrayOf(PropTypes.object),
-    ]),
+		options: PropTypes.arrayOf(PropTypes.object),
+		defaultOptions: PropTypes.oneOfType([
+			PropTypes.bool,
+			PropTypes.arrayOf(PropTypes.object),
+		]),
 
-    // eslint-disable-next-line react/forbid-prop-types
-    additional: PropTypes.any,
-    reduceOptions: PropTypes.func,
+		// eslint-disable-next-line react/forbid-prop-types
+		additional: PropTypes.any,
+		reduceOptions: PropTypes.func,
 
-    SelectComponent: PropTypes.elementType,
-    components: PropTypes.objectOf(PropTypes.func),
-    filterOption: PropTypes.func,
+		SelectComponent: PropTypes.elementType,
+		components: PropTypes.objectOf(PropTypes.func),
+		filterOption: PropTypes.func,
 
-    onInputChange: PropTypes.func.isRequired,
+		onInputChange: PropTypes.func.isRequired,
 
-    // eslint-disable-next-line react/forbid-prop-types
-    cacheUniq: PropTypes.any,
+		// eslint-disable-next-line react/forbid-prop-types
+		cacheUniq: PropTypes.any,
 
-    selectRef: PropTypes.func,
-  };
+		selectRef: PropTypes.func,
+	};
 
-  static defaultProps = {
-    debounceTimeout: 0,
-    shouldLoadMore: defaultShouldLoadMore,
+	static defaultProps = {
+		debounceTimeout: 0,
+		shouldLoadMore: defaultShouldLoadMore,
 
-    options: null,
-    defaultOptions: false,
-    additional: null,
-    reduceOptions: defaultReduceOptions,
+		options: null,
+		defaultOptions: false,
+		additional: null,
+		reduceOptions: defaultReduceOptions,
 
-    SelectComponent: Select,
-    components: {},
-    filterOption: null,
+		SelectComponent: Select,
+		components: {},
+		filterOption: null,
 
-    cacheUniq: null,
+		cacheUniq: null,
 
-    selectRef: Function.prototype,
-  };
+		selectRef: Function.prototype,
+	};
 
-  constructor(props) {
-    super(props);
+	constructor(props) {
+		super(props);
 
-    const {
-      options,
-      defaultOptions,
-    } = props;
+		const {
+			options,
+			defaultOptions,
+		} = props;
 
-    const initialOptions = defaultOptions === true
-      ? null
-      : (defaultOptions instanceof Array)
-        ? defaultOptions
-        : options;
+		const initialOptions = defaultOptions === true
+		? null
+		: (defaultOptions instanceof Array)
+			? defaultOptions
+			: options;
 
-    const initialOptionsCache = initialOptions
-      ? {
-        '': {
-          isFirstLoad: false,
-          isLoading: false,
-          options: initialOptions,
-          hasMore: true,
-          additional: props.additional,
-        },
-      }
-      : {};
+		const initialOptionsCache = initialOptions
+		? {
+			'': {
+			isFirstLoad: false,
+			isLoading: false,
+			options: initialOptions,
+			hasMore: true,
+			additional: props.additional,
+			},
+		}
+		: {};
+		this.mounted = false;
+		this.state = {
+			optionsCache: initialOptionsCache,
+		};
+	}
 
-    this.state = {
-      optionsCache: initialOptionsCache,
-    };
-  }
+	async componentDidMount() {
+		this.mounted = true;
+		const {
+			defaultOptions,
+		} = this.props;
 
-  async componentDidMount() {
-    const {
-      defaultOptions,
-    } = this.props;
+		if (defaultOptions === true) {
+			await this.loadOptions();
+		}
+	}
 
-    if (defaultOptions === true) {
-      await this.loadOptions();
-    }
-  }
+	async componentDidUpdate(oldProps) {
+		const {
+			cacheUniq,
+			defaultOptions,
+			inputValue,
+			menuIsOpen,
+		} = this.props;
 
-  async componentDidUpdate(oldProps) {
-    const {
-      cacheUniq,
-      defaultOptions,
-      inputValue,
-      menuIsOpen,
-    } = this.props;
+		if (oldProps.cacheUniq !== cacheUniq) {
+			await this.setState({
+				optionsCache: {},
+			});
+			if (defaultOptions === true) {
+				await this.loadOptions();
+			}
+		} else {
+			if (inputValue !== oldProps.inputValue) {
+				this.handleInputChange(inputValue);
+			}
 
-    if (oldProps.cacheUniq !== cacheUniq) {
-      await this.setState({
-        optionsCache: {},
-      });
-      if (defaultOptions === true) {
-        await this.loadOptions();
-      }
-    } else {
-      if (inputValue !== oldProps.inputValue) {
-        this.handleInputChange(inputValue);
-      }
+			if (menuIsOpen && !oldProps.menuIsOpen) {
+				this.onMenuOpen();
+			}
+		}
+	}
 
-      if (menuIsOpen && !oldProps.menuIsOpen) {
-        this.onMenuOpen();
-      }
-    }
-  }
+	componentWillUnmount() {
+		this.mounted = false;
+	}
 
-  async onMenuOpen() {
-    const {
-      optionsCache,
-    } = this.state;
+	async onMenuOpen() {
+		const {
+			optionsCache,
+		} = this.state;
 
-    if (!optionsCache['']) {
-      await this.loadOptions();
-    }
-  }
+		if (!optionsCache['']) {
+			await this.loadOptions();
+		}
+	}
 
-  getInitialCache() {
-    const {
-      additional,
-    } = this.props;
+	getInitialCache() {
+		const {
+			additional,
+		} = this.props;
 
-    return {
-      isFirstLoad: true,
-      options: [],
-      hasMore: true,
-      isLoading: false,
-      additional,
-    };
-  }
+		return {
+			isFirstLoad: true,
+			options: [],
+			hasMore: true,
+			isLoading: false,
+			additional,
+		};
+	}
 
-  handleScrolledToBottom = async () => {
-    const {
-      inputValue,
-    } = this.props;
-    const {
-      optionsCache,
-    } = this.state;
+	handleScrolledToBottom = async () => {
+		const {
+			inputValue,
+		} = this.props;
+		const {
+			optionsCache,
+		} = this.state;
 
-    const currentOptions = optionsCache[inputValue];
+		const currentOptions = optionsCache[inputValue];
 
-    if (currentOptions) {
-      await this.loadOptions();
-    }
-  }
+		if (currentOptions) {
+			await this.loadOptions();
+		}
+	}
 
-  async handleInputChange(search) {
-    const {
-      optionsCache,
-    } = this.state;
+	async handleInputChange(search) {
+		const {
+			optionsCache,
+		} = this.state;
 
-    if (!optionsCache[search]) {
-      await this.loadOptions();
-    }
-  }
+		if (!optionsCache[search]) {
+			await this.loadOptions();
+		}
+	}
 
-  async loadOptions() {
-    const {
-      inputValue,
-    } = this.props;
-    const {
-      optionsCache,
-    } = this.state;
+	async loadOptions() {
+		const {
+			inputValue,
+		} = this.props;
+		const {
+			optionsCache,
+		} = this.state;
 
-    const currentOptions = optionsCache[inputValue] || this.getInitialCache();
+		const currentOptions = optionsCache[inputValue] || this.getInitialCache();
 
-    if (currentOptions.isLoading || !currentOptions.hasMore) {
-      return;
-    }
+		if (currentOptions.isLoading || !currentOptions.hasMore) {
+			return;
+		}
 
-    await this.setState((prevState) => ({
-      optionsCache: {
-        ...prevState.optionsCache,
-        [inputValue]: {
-          ...currentOptions,
-          isLoading: true,
-        },
-      },
-    }));
+		await this.setState((prevState) => ({
+			optionsCache: {
+				...prevState.optionsCache,
+				[inputValue]: {
+					...currentOptions,
+					isLoading: true,
+				},
+			},
+		}));
 
-    const {
-      debounceTimeout,
-    } = this.props;
+		const {
+			debounceTimeout,
+		} = this.props;
 
-    if (debounceTimeout > 0) {
-      await sleep(debounceTimeout);
+		if (debounceTimeout > 0) {
+		await sleep(debounceTimeout);
 
-      const {
-        inputValue: newInputValue,
-      } = this.props;
+		const {
+				inputValue: newInputValue,
+		} = this.props;
 
-      if (inputValue !== newInputValue) {
-        await this.setState((prevState) => ({
-          optionsCache: {
-            ...prevState.optionsCache,
-            [inputValue]: {
-              ...prevState.optionsCache[inputValue],
-              isLoading: false,
-            },
-          },
-        }));
+		if (inputValue !== newInputValue) {
+			await this.setState((prevState) => ({
+				optionsCache: {
+					...prevState.optionsCache,
+					[inputValue]: {
+						...prevState.optionsCache[inputValue],
+						isLoading: false,
+					},
+				},
+			}));
 
-        return;
-      }
-    }
+			return;
+		}
+		}
 
-    let hasError;
-    let additional;
-    let options;
-    let hasMore;
+		let hasError;
+		let additional;
+		let options;
+		let hasMore;
 
-    try {
-      const {
-        loadOptions,
-      } = this.props;
+		try {
+			const {
+				loadOptions,
+			} = this.props;
 
-      const response = await loadOptions(
-        inputValue,
-        currentOptions.options,
-        currentOptions.additional,
-      );
+			const response = await loadOptions(
+				inputValue,
+				currentOptions.options,
+				currentOptions.additional,
+			);
+			
+			({ options, hasMore, additional } = response);
 
-      ({ options, hasMore, additional } = response);
+			hasError = false;
+		} catch (e) {
+			hasError = true;
+		}
 
-      hasError = false;
-    } catch (e) {
-      hasError = true;
-    }
+		if(this.mounted) {
+			if (hasError) {
+				await this.setState((prevState) => ({
+					optionsCache: {
+						...prevState.optionsCache,
+						[inputValue]: {
+							...currentOptions,
+							isLoading: false,
+						},
+					},
+				}));
+			} else {
+				const newAdditional = typeof additional === 'undefined' ? null : additional;
 
-    if (hasError) {
-      await this.setState((prevState) => ({
-        optionsCache: {
-          ...prevState.optionsCache,
-          [inputValue]: {
-            ...currentOptions,
-            isLoading: false,
-          },
-        },
-      }));
-    } else {
-      const newAdditional = typeof additional === 'undefined' ? null : additional;
+				const {
+					reduceOptions,
+				} = this.props;
 
-      const {
-        reduceOptions,
-      } = this.props;
+				await this.setState((prevState) => ({
+					optionsCache: {
+						...prevState.optionsCache,
+						[inputValue]: {
+							...currentOptions,
+							options: reduceOptions(currentOptions.options, options, newAdditional),
+							hasMore: !!hasMore,
+							isLoading: false,
+							isFirstLoad: false,
+							additional: newAdditional,
+						},
+					},
+				}));
+			}
+		}
+	}
 
-      await this.setState((prevState) => ({
-        optionsCache: {
-          ...prevState.optionsCache,
-          [inputValue]: {
-            ...currentOptions,
-            options: reduceOptions(currentOptions.options, options, newAdditional),
-            hasMore: !!hasMore,
-            isLoading: false,
-            isFirstLoad: false,
-            additional: newAdditional,
-          },
-        },
-      }));
-    }
-  }
+	render() {
+		const {
+			selectRef,
+			components,
+			SelectComponent,
+			inputValue,
+			...props
+		} = this.props;
 
-  render() {
-    const {
-      selectRef,
-      components,
-      SelectComponent,
-      inputValue,
-      ...props
-    } = this.props;
+		const {
+			optionsCache,
+		} = this.state;
 
-    const {
-      optionsCache,
-    } = this.state;
+		const currentOptions = optionsCache[inputValue] || this.getInitialCache();
 
-    const currentOptions = optionsCache[inputValue] || this.getInitialCache();
-
-    return (
-      <SelectComponent
-        {...props}
-        inputValue={inputValue}
-        onMenuScrollToBottom={this.handleScrolledToBottom}
-        handleScrolledToBottom={this.handleScrolledToBottom}
-        isLoading={currentOptions.isLoading}
-        isFirstLoad={currentOptions.isFirstLoad}
-        options={currentOptions.options}
-        components={{
-          MenuList,
-          ...components,
-        }}
-        ref={selectRef}
-      />
-    );
-  }
+		return (
+			(this.mounted &&
+				<SelectComponent
+					{...props}
+					inputValue={inputValue}
+					onMenuScrollToBottom={this.handleScrolledToBottom}
+					handleScrolledToBottom={this.handleScrolledToBottom}
+					isLoading={currentOptions.isLoading}
+					isFirstLoad={currentOptions.isFirstLoad}
+					options={currentOptions.options}
+					components={{
+						MenuList,
+						...components,
+					}}
+					ref={selectRef}
+				/>
+			)
+		);
+	}
 }
 
 export default AsyncPaginateBase;

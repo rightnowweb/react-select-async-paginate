@@ -1,5 +1,5 @@
 {
-  "name": "react-select-async-paginate-sf",
+  "name": "react-select-async-paginate-sf2",
   "version": "0.3.7",
   "description": "Wrapper above react-select that supports pagination on menu scroll",
   "private": true,
@@ -43,5 +43,6 @@
     "raf": "^3.4.1",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
-  }
+  },
+  "main": "index.js"
 }
