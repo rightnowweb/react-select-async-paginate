@@ -1,5 +1,7 @@
 {
   "name": "react-select-async-paginate-sf",
+  "version": "0.3.7",
+  "description": "Wrapper above react-select that supports pagination on menu scroll",
   "private": true,
   "workspaces": [
     "packages/*",
